@@ -11,9 +11,15 @@ import numpy as np
 from scipy.integrate import simps
 import warnings
 
-from generate_species import gen_com, n_diff_spe, lambs, dlam
-import I_in_functions as I_in
-from differential_functions import own_ode
+try:
+    from generate_species import gen_com, n_diff_spe, lambs, dlam
+    import I_in_functions as I_in
+    from differential_functions import own_ode
+except ImportError: # to allow importing in a submodule
+    from phytoplankton_communities.generate_species import gen_com, n_diff_spe
+    from phytoplankton_communities.generate_species import lambs, dlam
+    import  phytoplankton_communities.I_in_functions as I_in
+    from  phytoplankton_communities.differential_functions import own_ode
     
 def find_survivors(equi, species_id):
     # compute the average amount of each species in the communities

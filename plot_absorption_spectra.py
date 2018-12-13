@@ -10,6 +10,8 @@ Plot the example absorption spectrum of two coexisting species
 
 import numpy as np
 import matplotlib.pyplot as plt
+
+
 from generate_species import gen_com, pigments, pigment_names, lambs
 import richness_computation as rc
 from I_in_functions import sun_spectrum

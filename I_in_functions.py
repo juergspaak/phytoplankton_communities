@@ -10,7 +10,10 @@ import pandas as pd
 from scipy.interpolate import interp1d
 from scipy.integrate import simps
 
-from generate_species import lambs, dlam
+try:
+    from generate_species import lambs, dlam
+except ImportError: # to allow importing in a submodule
+    from phytoplankton_communities.generate_species import lambs, dlam
 
 
 ###############################################################################
