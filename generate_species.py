@@ -10,14 +10,20 @@ from scipy.integrate import simps
 import warnings
 
 # load pigment absorption spectra
-df = pd.read_csv("pigments.csv")
+try:
+    df = pd.read_csv("pigments.csv")
+    # which pigmentation type contains which pigment
+    pig_spe_id = pd.read_csv("Pigment_algae_table.csv")
+except FileNotFoundError:
+    df = pd.read_csv("phytoplankton_communities/pigments.csv")
+    # which pigmentation type contains which pigment
+    pig_spe_id = pd.read_csv("phytoplankton_communities/"
+                             "Pigment_algae_table.csv")
 lambs = df["lambda"].values
 dlam = lambs[1]-lambs[0]                     
 pigments = df.values[:,1:].T
 pigment_names = df.columns[1:]
 
-# which pigmentation type contains which pigment
-pig_spe_id = pd.read_csv("Pigment_algae_table.csv")
 species_pigments = pig_spe_id.iloc[:,2:].values
 species_pigments[np.isnan(species_pigments)] = 0
                  

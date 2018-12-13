@@ -18,8 +18,10 @@ except ImportError: # to allow importing in a submodule
 
 ###############################################################################
 # Sun light data
-
-sun_data = pd.read_csv("sunlight.csv")
+try:
+    sun_data = pd.read_csv("sunlight.csv")
+except FileNotFoundError:
+    sun_data = pd.read_csv("phytoplankton_communities/sunlight.csv")
 # units: [sun_spectrum] = (mu mol photons) * m^-2 * s^-1 * nm^-1
 sun_spectrum = {}    
 for key in ["usual", "direct full", "blue sky", "clouded"]:
@@ -50,8 +52,12 @@ def sun_light(lux = [20,200], period = 10, sky = "blue sky"):
     
 ###############################################################################
 # background absorption
+try:
+    background = pd.read_csv("background_absorption.csv")
+except FileNotFoundError:
+    background = pd.read_csv("phytoplankton_communities/"
+                           "background_absorption.csv")
 
-background = pd.read_csv("background_absorption.csv")
 
 k_water = background["lambs, water"], background["water"]
 ind = np.isfinite(k_water[0])
