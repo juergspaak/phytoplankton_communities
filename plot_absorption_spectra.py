@@ -17,7 +17,7 @@ import richness_computation as rc
 from I_in_functions import sun_spectrum
 
 # fix randomness
-np.random.seed(hash(5))
+np.random.seed(hash(4))
 
 I_in = 40*sun_spectrum["direct full"]
 
@@ -80,4 +80,4 @@ ax_ex1.set_title("B", loc = "left")
 ax_ex2.set_title("C", loc = "left")
 fig.tight_layout()
 
-fig.savefig("Figure, absorption_spectra.pdf")
+fig.savefig("Figure, absorption_spectra2.pdf")
