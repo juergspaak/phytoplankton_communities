@@ -14,7 +14,7 @@ try:
     df = pd.read_csv("pigments.csv")
     # which pigmentation type contains which pigment
     pig_spe_id = pd.read_csv("Pigment_algae_table.csv")
-except FileNotFoundError:
+except (FileNotFoundError,OSError):
     df = pd.read_csv("phytoplankton_communities/pigments.csv")
     # which pigmentation type contains which pigment
     pig_spe_id = pd.read_csv("phytoplankton_communities/"
@@ -71,7 +71,7 @@ def gen_com(present_species, fac, n_com_org = 100, I_ins = None,
 
     
     # check input
-    if max(present_species)>n_diff_spe:
+    if max(present_species)>=n_diff_spe:
         raise ValueError("maximum of `present_species` must be at most"+
                          "{} entries".format(n_diff_spe))
     

@@ -20,7 +20,7 @@ except ImportError: # to allow importing in a submodule
 # Sun light data
 try:
     sun_data = pd.read_csv("sunlight.csv")
-except FileNotFoundError:
+except (OSError,FileNotFoundError):
     sun_data = pd.read_csv("phytoplankton_communities/sunlight.csv")
 # units: [sun_spectrum] = (mu mol photons) * m^-2 * s^-1 * nm^-1
 sun_spectrum = {}    
@@ -54,7 +54,7 @@ def sun_light(lux = [20,200], period = 10, sky = "blue sky"):
 # background absorption
 try:
     background = pd.read_csv("background_absorption.csv")
-except FileNotFoundError:
+except (OSError,FileNotFoundError):
     background = pd.read_csv("phytoplankton_communities/"
                            "background_absorption.csv")
 
