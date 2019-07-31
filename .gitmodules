@@ -1,0 +1,3 @@
+[submodule "nfd_definitions"]
+	path = nfd_definitions
+	url = https://gitlab.unamur.be/bio/URBE/EEEcology/common_code/nfd_definitions.git

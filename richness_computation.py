@@ -13,13 +13,15 @@ import warnings
 
 try:
     from generate_species import gen_com, n_diff_spe, lambs, dlam
-    import I_in_functions as I_in
+    import I_in_functions as I_in_m
     from differential_functions import own_ode
+    from nfd_definitions import numerical_NFD
 except ImportError: # to allow importing in a submodule
     from phytoplankton_communities.generate_species import gen_com, n_diff_spe
     from phytoplankton_communities.generate_species import lambs, dlam
-    import  phytoplankton_communities.I_in_functions as I_in
+    import  phytoplankton_communities.I_in_functions as I_in_m
     from  phytoplankton_communities.differential_functions import own_ode
+    from phytoplankton_communities.nfd_definitions import numerical_NFD
     
 def find_survivors(equi, species_id):
     # compute the average amount of each species in the communities
@@ -30,7 +32,82 @@ def pigment_richness(equi, alpha):
 
     return np.mean(np.sum(np.sum(equi*alpha, axis = -2)>0, axis = -2),-1)
 
-def multispecies_equi(fitness, k_spec, I_in = 50*I_in.sun_spectrum["blue sky"],
+def NFD_phytoplankton(phi, l, k_spec,  equi = True, 
+                      I_in = 50*I_in_m.sun_spectrum["blue sky"],
+                      k_BG = np.array([0]), zm = 100):
+    """Compute the NFD parameters for a community
+    
+    Parameters
+    ----------
+    fitness: array (shape = m,n)
+        Base fitness, \phi/l for each species
+    k_spec: array (shape = len(lambs), m, n)
+        Absorption spectrum of the species
+    equi: array (shape = m,n)
+        Equilibrium density of all species. NFD will only be computed of
+        species that have positive equilibrium density.
+    I_in: array (shape = len(lambs),m)
+        Incoming lights at which equilibrium must be computed
+    runs: int
+        Number of iterations to find equilibrium
+    k_BG: float
+        background absorptivity
+        
+    Returns
+    -------
+    equis: array, (shape = m,n)
+        Equilibrium densitiy of all species, that reached equilibrium
+    unfixed: array, (shape = n)
+        Boolean array indicating in which communitiy an equilibrium was found
+    """
+    if equi is True:
+        pos = np.full(phi.shape, True, bool).T
+    else:
+        pos = equi.T>0
+    ND, FD = np.full((2,) + phi.shape, np.nan)
+    I_in_f = lambda t: I_in
+    for i in range(len(l)):
+        try:
+            n_spec = int(sum(pos[i]))
+            if n_spec == 1:
+                ND[pos[i],i] = 1
+                FD[pos[i],i] = 0
+                continue
+            pars = dict(N_star = equi[pos[i],i]*np.ones((n_spec, n_spec)))
+            pars = numerical_NFD.NFD_model(multi_growth,n_spec = n_spec,
+                pars = pars,
+                args = (0, I_in_f, k_spec[:,pos[i],i], phi[pos[i],i],
+                        l[[i]],zm, k_BG, "per_cap"))
+            ND[pos[i],i] = pars["ND"]
+            FD[pos[i],i] = pars["FD"]
+        except numerical_NFD.InputError:
+            pass
+    return ND, FD
+        
+def multi_growth(N,t,I_in, k_spec, phi,l,zm = 1,k_BG = 0, linear = False):
+    if linear == "per_cap":
+        k_spec = k_spec.reshape(k_spec.shape + (1,))
+        phi = phi.reshape(phi.shape + (1,))
+    if linear:
+        N = N.reshape(-1,len(l))
+    # growth rate of the species
+    # sum(N_j*k_j(lambda))
+    tot_abs = zm*(np.nansum(N*k_spec, axis = 1, keepdims = True) + k_BG)
+    if np.any(tot_abs==0):
+        growth = phi*simps(k_spec*I_in(t).reshape(-1,1,1), dx = dlam, axis = 0)
+    else:
+        # growth part
+        growth = phi*simps(k_spec/tot_abs*(1-np.exp(-tot_abs))\
+                           *I_in(t).reshape(-1,1,1),dx = dlam, axis = 0)
+    
+    if linear == "per_cap":
+        return (growth-l).reshape(-1)
+    elif linear:
+        return (N*(growth-l)).reshape(-1)
+    else:
+        return N*(growth -l)
+
+def multispecies_equi(fitness, k_spec, I_in = 50*I_in_m.sun_spectrum["blue sky"],
                       k_BG = np.array([0]), zm = 100, runs = 5000):
     """Compute the equilibrium density for several species with its pigments
     
@@ -102,23 +179,9 @@ def multispecies_equi(fitness, k_spec, I_in = 50*I_in.sun_spectrum["blue sky"],
             fitness = fitness[:,cond]
         i+=1
     return equis_fix, unfixed
-
-def multi_growth(N,t,I_in, k_spec, phi,l,zm = 1,k_BG = 0, linear = False):
-    if linear:
-        N = N.reshape(-1,len(l))
-    # growth rate of the species
-    # sum(N_j*k_j(lambda))
-    tot_abs = zm*(np.nansum(N*k_spec, axis = 1, keepdims = True) + k_BG)
-    # growth part
-    growth = phi*simps(k_spec/tot_abs*(1-np.exp(-tot_abs))\
-                       *I_in(t).reshape(-1,1,1),dx = dlam, axis = 0)
-    if linear:
-        return (N*(growth-l)).reshape(-1)
-    else:
-        return N*(growth -l)
     
 def fluctuating_richness(present_species = np.arange(5), n_com = 100, fac = 3,
-    l_period = 10, I_in = I_in.sun_light(), t_const = [0,0.5], 
+    l_period = 10, I_in = I_in_m.sun_light(), t_const = [0,0.5], 
     randomized_spectra = 0, k_BG = np.array([0]),zm = 100, _iteration = 0,
     species = None):
     """Computes the number of coexisting species in fluctuating incoming light
@@ -321,9 +384,25 @@ def fluctuating_richness(present_species = np.arange(5), n_com = 100, fac = 3,
     nr_pig = np.sum(np.sum(sols[-1]*alpha,axis=-2)>0,axis = -2)
     prob_pig[-1] = np.mean(nr_pig[...,np.newaxis] == np.arange(len(alpha)+1),
             axis = 0)
+    ND, FD = np.empty((2,len(t_const)) +phi.shape)
+    for i,t in enumerate(t_const):
+        ND[i], FD[i] = NFD_phytoplankton(phi, l, k_spec,  equi = equi[i], 
+                      I_in = I_in(t),
+                      k_BG = k_BG, zm = zm)
+    
+    no_NFD = np.sum(np.all(np.isnan(ND), axis = 1),axis = -1) # NFD was not computed
+    richness = (equi>0).sum(axis = 1)
+    no_NFD = no_NFD/np.sum(richness > 1) # percentage of non computed
+    ND_av = np.array([[np.nanmean(ND[j,:,richness[j] == i], axis = (0,1))
+        for i in range(1,6)] for j in range(len(t_const))])
+    FD_av = np.array([[np.nanmean(FD[j,:,richness[j] == i], axis = (0,1))
+        for i in range(1,6)] for j in range(len(t_const))])
+    FD_av = np.append(FD_av, np.full((1,5), np.nan), axis = 0)
+    ND_av = np.append(ND_av, np.full((1,5), np.nan), axis = 0)
+    no_NFD = np.append(no_NFD, np.nan)
     
     return (richness_equi, EF_biovolume, r_pig_equi, r_pig_start, prob_spec, 
-            prob_pig, n_fix)
+            prob_pig, n_fix, ND_av, FD_av, no_NFD)
             
 
 if __name__ == "__main__":
