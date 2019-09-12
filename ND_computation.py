@@ -310,10 +310,10 @@ def constant_richness(present_species = np.arange(5), n_com = 100, fac = 3,
     if len(present_species)<5:
         ND = np.append(ND, np.full((5-len(ND), ND.shape[-1]), np.nan)
                     , axis = 0)
-        FD = np.append(ND, np.full((5-len(ND), ND.shape[-1]), np.nan)
+        FD = np.append(FD, np.full((5-len(FD), ND.shape[-1]), np.nan)
                     , axis = 0)
-        equi_s = np.append(ND, np.full((5-len(ND), ND.shape[-1]), np.nan)
-                    , axis = 0)
+        equi_s = np.append(equi_s, np.full((5-len(equi_s), ND.shape[-1])
+                ,np.nan), axis = 0)
     return np.array((r_pig_start, r_pig_equi, richness, selection,
             complementarity, EF, *equi_s, *ND, *FD)).T
             
