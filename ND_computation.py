@@ -288,7 +288,7 @@ def constant_richness(present_species = np.arange(5), n_com = 100, fac = 3,
     ND, FD = NFD_phytoplankton(phi, l, k_spec,  equi, I_in = I_in,
                       k_BG = k_BG, zm = zm)
     sort_index = np.argsort(equi, axis = 0)
-    equi_s = np.sort(equi, axis = 0)[:5]
+    equi_s = np.sort(equi, axis = 0)[-5:][::-1]
     
     # sort ND and FD according to equilibrium dens
     ND = ND[sort_index, np.arange(sum(fixed))][-5:][::-1]
