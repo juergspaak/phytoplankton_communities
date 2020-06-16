@@ -32,7 +32,7 @@ def pigment_richness(equi, alpha):
 
     return np.mean(np.sum(np.sum(equi*alpha, axis = -2)>0, axis = -2),-1)
 
-def NFD_phytoplankton(phi, l, k_spec,  equi = True, 
+def NFD_phytoplankton(phi, l, k_photo, k_abs,  equi = True, 
                       I_in = 50*I_in_m.sun_spectrum["blue sky"],
                       k_BG = np.array([0]), zm = 100):
     """Compute the NFD parameters for a community
@@ -76,28 +76,29 @@ def NFD_phytoplankton(phi, l, k_spec,  equi = True,
             pars = dict(N_star = equi[pos[i],i]*np.ones((n_spec, n_spec)))
             pars = numerical_NFD.NFD_model(multi_growth,n_spec = n_spec,
                 pars = pars,
-                args = (0, I_in_f, k_spec[:,pos[i],i], phi[pos[i],i],
-                        l[[i]],zm, k_BG, "per_cap"))
+                args = (0, I_in_f, k_photo[:,pos[i],i], k_abs[:,pos[i],i],
+                    phi[pos[i],i],l[[i]],zm, k_BG, "per_cap"))
             ND[pos[i],i] = pars["ND"]
             FD[pos[i],i] = pars["FD"]
         except numerical_NFD.InputError:
             pass
     return ND, FD
         
-def multi_growth(N,t,I_in, k_spec, phi,l,zm = 1,k_BG = 0, linear = False):
+def multi_growth(N,t,I_in, k_photo, k_abs, phi,l,zm = 1,k_BG = 0, linear = False):
     if linear == "per_cap":
-        k_spec = k_spec.reshape(k_spec.shape + (1,))
+        k_photo = k_photo.reshape(k_photo.shape + (1,))
+        k_abs = k_abs.reshape(k_abs.shape + (1,))
         phi = phi.reshape(phi.shape + (1,))
     if linear:
         N = N.reshape(-1,len(l))
     # growth rate of the species
     # sum(N_j*k_j(lambda))
-    tot_abs = zm*(np.nansum(N*k_spec, axis = 1, keepdims = True) + k_BG)
+    tot_abs = zm*(np.nansum(N*k_abs, axis = 1, keepdims = True) + k_BG)
     if np.any(tot_abs==0):
-        growth = phi*simps(k_spec*I_in(t).reshape(-1,1,1), dx = dlam, axis = 0)
+        growth = phi*simps(k_photo*I_in(t).reshape(-1,1,1), dx = dlam, axis = 0)
     else:
         # growth part
-        growth = phi*simps(k_spec/tot_abs*(1-np.exp(-tot_abs))\
+        growth = phi*simps(k_photo/tot_abs*(1-np.exp(-tot_abs))\
                            *I_in(t).reshape(-1,1,1),dx = dlam, axis = 0)
     
     if linear == "per_cap":
@@ -107,7 +108,8 @@ def multi_growth(N,t,I_in, k_spec, phi,l,zm = 1,k_BG = 0, linear = False):
     else:
         return N*(growth -l)
 
-def multispecies_equi(fitness, k_spec, I_in = 50*I_in_m.sun_spectrum["blue sky"],
+def multispecies_equi(fitness, k_photo, k_abs,
+                      I_in = 50*I_in_m.sun_spectrum["blue sky"],
                       k_BG = np.array([0]), zm = 100, runs = 5000):
     """Compute the equilibrium density for several species with its pigments
     
@@ -140,7 +142,8 @@ def multispecies_equi(fitness, k_spec, I_in = 50*I_in_m.sun_spectrum["blue sky"]
     equis_fix = np.zeros(equis.shape)
 
     # k_spec(lam), shape = (len(lam), richness, ncom)
-    abs_points = k_spec.copy()
+    abs_photo = k_photo.copy()
+    abs_abs = k_abs.copy()
     I_in.shape = -1,1,1
     unfixed = np.full(fitness.shape[-1], True, dtype = bool)
     n = 20
@@ -149,10 +152,12 @@ def multispecies_equi(fitness, k_spec, I_in = 50*I_in_m.sun_spectrum["blue sky"]
     #print(equis.shape, equis_fix.shape, fitness.shape, np.sum(unfixed), abs_points.shape)
     while np.any(unfixed) and i<runs:          
         # sum_i(N_i*sum_j(a_ij*k_j(lam)), shape = (len(lam),itera)
-        tot_abs = zm*(np.sum(equis*abs_points, axis = 1,
+        tot_abs = zm*(np.sum(equis*abs_abs, axis = 1,
                              keepdims = True) + k_BG)
+        if (tot_abs == 0).any():
+            raise
         # N_j*k_j(lam), shape = (npi, len(lam), itera)
-        all_abs = equis*abs_points
+        all_abs = equis*abs_photo
         # N_j*k_j(lam)/sum_j(N_j*k_j)*(1-e^(-sum_j(N_j*k_j))), shape =(npi, len(lam), itera)
         y_simps = all_abs/tot_abs*(I_in*(1-np.exp(-tot_abs)))
         # fit*int(y_simps)
@@ -175,7 +180,8 @@ def multispecies_equi(fitness, k_spec, I_in = 50*I_in_m.sun_spectrum["blue sky"]
             # prepare for next runs
             unfixed[unfixed] = cond
             equis = equis[:,cond]
-            abs_points = abs_points[...,cond]
+            abs_abs = abs_abs[...,cond]
+            abs_photo = abs_photo[...,cond]
             fitness = fitness[:,cond]
         i+=1
     return equis_fix, unfixed
@@ -236,11 +242,11 @@ def fluctuating_richness(present_species = np.arange(5), n_com = 100, fac = 3,
              
     if species is None:
         # generate species and communities
-        phi,l,k_spec,alpha, feasible = gen_com(present_species, fac, n_com,
-                        I_ins = np.array([I_in(t*l_period) for t in t_const]))
+        phi,l,k_photo, k_abs,alpha, feasible = gen_com(present_species, fac, 
+                n_com,I_ins = np.array([I_in(t*l_period) for t in t_const]))
 
     else:
-        phi,l,k_spec,alpha, feasible = species
+        phi,l,k_photo, k_abs, alpha, feasible = species
     
     if not feasible:
         return None
@@ -251,20 +257,22 @@ def fluctuating_richness(present_species = np.arange(5), n_com = 100, fac = 3,
         # slightly change the spectra of all species
         # equals interspecific variation of pigments
         eps = randomized_spectra
-        k_spec *= np.random.uniform(1-eps, 1+eps, k_spec.shape)
+        k_photo *= np.random.uniform(1-eps, 1+eps, k_photo.shape)
+        k_abs *= np.random.uniform(1-eps, 1+eps, k_abs.shape)
     
     # compute the equilibria densities for the different light regimes
     equi = np.empty((len(t_const),) + phi.shape)
     unfixed = np.empty((len(t_const),phi.shape[-1]))
     for i,t in list(enumerate(t_const)):
-        equi[i], unfixed[i] = multispecies_equi(phi/l, k_spec, 
+        equi[i], unfixed[i] = multispecies_equi(phi/l, k_photo, k_abs, 
             I_in(t*l_period), runs = 5000*(1+_iteration),k_BG=k_BG, zm = zm)
     # consider only communities, where algorithm found equilibria (all regimes)
     fixed = np.logical_not(np.sum(unfixed, axis = 0))
     equi = equi[..., fixed]
     phi = phi[:, fixed]
     l = l[fixed]
-    k_spec = k_spec[..., fixed]
+    k_photo = k_photo[..., fixed]
+    k_abs = k_abs[..., fixed]
     alpha = alpha[...,fixed]
     n_fix = np.sum(fixed)
     
@@ -309,8 +317,9 @@ def fluctuating_richness(present_species = np.arange(5), n_com = 100, fac = 3,
     # set 0 all species that did not survive in any of the cases
     dead = np.sum((equi>0), axis = 0)==0
     phi[dead] = 0
-    k_spec[:,dead] = 0
-
+    k_photo[:,dead] = 0
+    k_abs[:,dead] = 0
+    
     # maximal richness over all environments in one community
     max_spec = np.amax(np.sum(equi>0, axis = 1))
     # sort them accordingly to throw rest away
@@ -318,7 +327,8 @@ def fluctuating_richness(present_species = np.arange(5), n_com = 100, fac = 3,
     spec_sort = np.argsort(np.amax(equi,axis = 0), axis = 0)[-max_spec:]
     phi = phi[spec_sort, com_ax]         
     equi = equi[np.arange(len(t_const)).reshape(-1,1,1),spec_sort, com_ax]
-    k_spec = k_spec[np.arange(len(lambs)).reshape(-1,1,1),spec_sort, com_ax]
+    k_photo = k_photo[np.arange(len(lambs)).reshape(-1,1,1),spec_sort, com_ax]
+    k_abs = k_abs[np.arange(len(lambs)).reshape(-1,1,1),spec_sort, com_ax]
     alpha = alpha[:,spec_sort, com_ax]
        
     ###########################################################################
@@ -332,7 +342,7 @@ def fluctuating_richness(present_species = np.arange(5), n_com = 100, fac = 3,
     undone = np.arange(phi.shape[-1])
     # compute 100 periods, 10 timepoints per period
     time = np.linspace(0,l_period*n_period,n_period*10)
-    phit,lt,k_spect = phi.copy(), l.copy(), k_spec.copy()
+    phit,lt,k_photot, k_abst = phi.copy(), l.copy(), k_photo.copy(), k_abst.copy()
     # to save the solutions found
     sols = np.empty((10,)+phi.shape)
     
@@ -341,7 +351,7 @@ def fluctuating_richness(present_species = np.arange(5), n_com = 100, fac = 3,
 
     while len(undone)>0 and counter <1000:
         sol = own_ode(multi_growth,start_dens, time[[0,-1]], 
-                      I_in, k_spect, phit,lt,zm,k_BG,steps = len(time))
+                      I_in, k_photot, k_abst, phit,lt,zm,k_BG,steps = len(time))
         
         # determine change in densities, av at end and after finding equilibria
         av_end = np.average(sol[-10:], axis = 0) 
@@ -360,7 +370,7 @@ def fluctuating_richness(present_species = np.arange(5), n_com = 100, fac = 3,
         
         # select next communities
         undone = undone[unfixed]
-        phit,lt,k_spect = phi[:, undone], l[undone], k_spec[...,undone]
+        phit,lt,k_photot, k_abst = phi[:, undone], l[undone], k_photot[...,undone], k_abst[..., undone]
         start_dens = sol[-1,:,unfixed].T
         # remove very rare species
         start_dens[start_dens<start_dens.sum(axis = 0)/10000] = 0
@@ -386,9 +396,8 @@ def fluctuating_richness(present_species = np.arange(5), n_com = 100, fac = 3,
             axis = 0)
     ND, FD = np.empty((2,len(t_const)) +phi.shape)
     for i,t in enumerate(t_const):
-        ND[i], FD[i] = NFD_phytoplankton(phi, l, k_spec,  equi = equi[i], 
-                      I_in = I_in(t),
-                      k_BG = k_BG, zm = zm)
+        ND[i], FD[i] = NFD_phytoplankton(phi, l, k_photo, k_abs,equi = equi[i], 
+                      I_in = I_in(t), k_BG = k_BG, zm = zm)
     
     no_NFD = np.sum(np.all(np.isnan(ND), axis = 1),axis = -1) # NFD was not computed
     richness = (equi>0).sum(axis = 1)

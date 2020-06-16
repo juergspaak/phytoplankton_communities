@@ -1,10 +1,16 @@
-Pigment,Reference paper,Heterokontaphyta 1,Heterokontaphyta 2,Heterokontaphyta 3,Haptophyta,Prochlorophyta,Euglenophyta,Chlorarachniophyta,Chlorophyta,Dinophyta I,Glaucophyta,Rhodophyta,Cryptophyta,Cyanophyta 1,Cyanophyta 2,Cyanophyta 3
-Chl a,Bricaud 2004,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
-Chl b,Bricaud 2004,,,,,0.2,0.2,0.2,0.2,,,,,,,
-Chl c,Bricaud 2004,,0.2,0.2,0.2,,,,,0.2,,,0.2,,,
-Beta Carotene,Bricaud 2004,,0.3,0.3,0.3,0.3,0.3,,0.3,0.3,0.3,0.3,,,,
-Peridinin,Bricaud 2004,,,,,,,,,0.5,,,,,,
-Fucoxanthin,Bricaud 2004,,,0.5,0.5,,,,,,,,,,,
-Phycocyanobilin,Six 2007,,,,,,,,,,1,0.25,0.25,1,0.25,0.25
-Phycoerythrobilin,Six 2007,,,,,,,,,,,1,1,,1,0.25
-Phycourobilin,Six 2007,,,,,,,,,,,,,,,1
+Pigments,Photosynthetic,Reference,Cyanophyta 1,Cyanophyta 2,Cyanophyta 3,Prochlorophyta,Glaucophyta,Rhodophyta,H/Chrysophycceae,H/Xantophyceae,H/Eustigmatophyceae,H/Bacillariophyceae,"H/Raphodophyceae,freshwater","H/Raphodophyceae,marine",H/Dictyochophyceae,H/Phaeophyceae,Haptopyta,"Haptopyta,some",Cryptophyta,Dinophyta I,Dinophyta II,Euglenophyta,Chlorarachniophyta,"Chlorophyta,some",Chlorophyta,Chlorophyta.1
+Chl a,1,Bricaud 2004,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+Chl b,1,Bricaud 2004,,,,1,,,,,,,,,,,,,,,,1,1,1,1,1
+Chl c,1,Bricaud 2004,,,,,,,1,0.3,,1,1,1,1,1,1,1,,,1,,,0.2,,
+Phycocyanobilin,1,Six 2007,1,0.25,0.25,,1,1,,,,,,,,,,,1,,,,,,,
+Phycoerythrobilin,1,Six 2007,,1,0.25,,,1,,,,,,,,,,,1,,,,,,,
+Phycourobilin,1,Six 2007,,,1,,1,1,,,,,,,,,,,,,,,,,,
+alpha-carotene,0,Bricaud 2004,,,,,,1,0.3,,,,,,,,0.3,0.3,1,,0.3,,,0.2,0.2,0.2
+beta-carotene,1,Bricaud 2004,,,,1,1,1,1,1,1,1,1,1,1,1,1,1,0.2,1,1,1,,1,1,1
+Zeaxanthin,0,Bricaud 2004,,,,1,1,1,0.3,,0.2,,,0.3,,0.2,,,0.3,,,0.2,,0.3,0.3,0.3
+Fucoxanthin,1,Bricaud 2004,,,,,,,1,,,1,,1,1,1,1,1,,,1,,,,,
+19'-BF,1,Bricaud 2004,,,,,,,,,,,,,,,,1,,,1,,,,,
+19'-HF,1,Bricaud 2004,,,,,,,,,,,,,,,,1,,,,,,,,
+Diadinoxanthin,0,Bricaud 2004,,,,,,,0.3,1,,1,1,1,0.3,0.3,1,1,,1,1,0.3,,,,
+Alloxanthin,0,Bricaud 2004,,,,,,,,,,,,,,,,,1,,,,,,,
+Peridinin,1,Bricaud 2004,,,,,,,,,,,,,,,,,,1,,,,,,
