@@ -197,7 +197,7 @@ def mono_equi_fun(fitness, k_spec, I_in = 50*I_in_m.sun_spectrum["blue sky"],
     return equi
 
 def constant_richness(present_species = np.arange(5), n_com = 100, fac = 3,
-    I_in = I_in_m.sun_light()(0), 
+    I_in = I_in_m.sun_light()(0), photoprotection = True,
     randomized_spectra = 0, k_BG = np.array([0]),zm = 100, _iteration = 0,
     species = None):
     """Computes the number of coexisting species in fluctuating incoming light
@@ -251,8 +251,9 @@ def constant_richness(present_species = np.arange(5), n_com = 100, fac = 3,
     # find potentially interesting communities       
     if species is None:
         # generate species and communities
-        phi,l,k_spec,alpha, feasible = gen_com(present_species, fac, n_com,
-                        I_ins = np.array([I_in]))
+        phi,l, k_photo, k_abs, alphas, feasible = gen_com(present_species,
+                        fac, n_com, I_ins = np.array([I_in]),
+                        photoprotection = photoprotection)
 
     else:
         phi,l,k_spec,alpha, feasible = species

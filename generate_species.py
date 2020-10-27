@@ -38,13 +38,14 @@ species_pigments[np.isnan(species_pigments)] = 0
 
 # photosynthetic active pigments
 photo = pig_spe_id.Photosynthetic[pigment_order].values == 1
+photo = np.array(5*[True] + [False,False] + 4*[True] + 4*[False])
 
 
                  
 n_diff_spe = len(species_names) # number of different species
  
 def gen_com(present_species, fac, n_com_org = 100, I_ins = None, 
-            k_BG = 0, zm = 100, run = 0):
+            k_BG = 0, zm = 100, run = 0, photoprotection = True):
     """Generate random species
     
     Generate species with random absorption spectrum according to the table
@@ -123,7 +124,10 @@ def gen_com(present_species, fac, n_com_org = 100, I_ins = None,
         alphas_prot = alphas_prot/int_abs*2.0e-7
         k_prot[np.isnan(k_prot)] = 0
         alphas_prot[np.isnan(alphas_prot)] = 0
-    k_abs = k_prot+k_photo
+    if photoprotection:
+        k_abs = k_prot+k_photo
+    else:
+        k_abs = k_photo # no photo protection pigments
     # check survivability in monoculture
     if not(I_ins is None):
         surv = mono_culture_survive(phi/l,k_photo, I_ins,k_BG,zm)
@@ -147,8 +151,10 @@ def gen_com(present_species, fac, n_com_org = 100, I_ins = None,
     alphas_photo = alphas_photo[..., spec_id]
     k_abs = k_abs[..., spec_id]
     alphas_prot = alphas_prot[..., spec_id]
-    
-    alphas = np.append(alphas_photo, alphas_prot, axis = 0)
+    if photoprotection:
+        alphas = np.append(alphas_photo, alphas_prot, axis = 0)
+    else:
+        alphas = alphas_photo
     
     return phi,l, k_photo, k_abs, alphas, True
 
@@ -179,16 +185,23 @@ if __name__ == "__main__":
     # For illustration plot the absorption spectrum of some random species
     import matplotlib.pyplot as plt
     import I_in_functions as I_inf
+    from matplotlib.cm import viridis
+    
+    colors = viridis(np.linspace(0,1, len(pigment_order)))
     
     # Absorption spectrum of all pigments
     fig = plt.figure(figsize=(9,9))
-    plt.plot(lambs,pigments.T, label = "1")
+    for i, name in enumerate(pigment_order):
+        plt.plot(lambs,pigments[i], label = name,
+                 color = colors[i], linestyle = [":", "-", "--"][i%3],
+                 linewidth = 3)
     plt.xlabel("nm")
-    plt.legend(labels = pigment_names)
+    plt.legend(labels = pigment_order)
     fig.savefig("golf.pdf")
     # plot the absorption spectrum of random species
     plt.figure()
     phi,l, k_photo, k_abs, alphas, a  = gen_com(np.random.randint(11,size = 5),4,100,
-                        50*I_inf.sun_spectrum["blue sky"], I_inf.k_BG["ocean"])
+                        50*I_inf.sun_spectrum["blue sky"], I_inf.k_BG["ocean"],
+                        photoprotection=False)
     plt.plot(k_photo[...,0])
     plt.plot(k_abs[...,0], '--')
