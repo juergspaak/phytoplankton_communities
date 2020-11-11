@@ -38,8 +38,15 @@ species_pigments[np.isnan(species_pigments)] = 0
 
 # photosynthetic active pigments
 photo = pig_spe_id.Photosynthetic[pigment_order].values == 1
-photo = np.array(5*[True] + [False,False] + 4*[True] + 4*[False])
 
+# from Finkel 2010
+size_range = 10**np.array([0,5]) # range of phytoplankton volumes
+# maximum and minimal value of photosynthetic efficiency
+phi_mean = 2e6 # taken from stomp/landaon
+tot_abs_mean = 2.0e-7 # average integrated absorbtion
+mean_size = np.prod(np.sqrt(size_range)) # reference size
+
+noise = [0.9,1/0.9]
 
                  
 n_diff_spe = len(species_names) # number of different species
@@ -89,13 +96,27 @@ def gen_com(present_species, fac, n_com_org = 100, I_ins = None,
     if max(present_species)>=n_diff_spe:
         raise ValueError("maximum of `present_species` must be at most"+
                          "{} entries".format(n_diff_spe))
+        
+    species_size = np.exp(np.random.uniform(*np.log(size_range),
+                                            (r_spec, n_com)))
     
+    phi_exponent = -0.06 # Finkel 2010
     # photosynthetic efficiency for each species
     # unit: [phi] = fl * (mumol photons)^-1
-    phi = np.random.uniform(1,3, (r_spec,n_com))*1e6
+
+    phi = phi_mean*(species_size/mean_size)**phi_exponent
+    phi = phi*np.random.uniform(*noise, species_size.shape)
+    
+    
     # loss rate of the community
     # unit: [l] = h^-1
     l = 0.003*(0.015/0.003)**np.random.uniform(0,1,n_com)
+
+    # Malerba 2010, Finkel 2010/2004, Key 2010
+    tot_abs_exponent = np.random.uniform(.23,0.58, species_size.shape)
+    tot_abs = tot_abs_mean*(species_size/mean_size)**tot_abs_exponent
+    tot_abs = tot_abs*np.random.uniform(*noise, species_size.shape)
+
 
     # concentration of each pigment for each species
     # unit: [alphas] = unitless
@@ -108,20 +129,22 @@ def gen_com(present_species, fac, n_com_org = 100, I_ins = None,
     
     # Total absorption of each species should be equal (similar to Stomp)
     int_abs = simps(k_photo, dx = dlam, axis = 0)
-    k_photo = k_photo/int_abs*2.0e-7
-
+    k_photo = k_photo/int_abs*tot_abs
+    
     # change pigment concentrations accordingly
-    alphas_photo = alphas_photo/int_abs*2.0e-7
+    alphas_photo = alphas_photo/int_abs*tot_abs
     
     # photoprotection
     alphas_prot = np.random.uniform(1,2,(sum(~photo),r_spec,n_com)) *\
                 species_pigments[~photo][:,present_species, np.newaxis]
     k_prot = np.einsum("pl,psc->lsc",pigments[~photo], alphas_prot)
     int_abs = simps(k_prot, dx = dlam, axis = 0)
+
+    
     with warnings.catch_warnings():
         warnings.simplefilter("ignore") # division by 0 is triggered
-        k_prot = k_prot/int_abs*0.5e-7
-        alphas_prot = alphas_prot/int_abs*2.0e-7
+        k_prot = k_prot/int_abs*tot_abs/4 # 20% non-photosyntetic absorption
+        alphas_prot = alphas_prot/int_abs*tot_abs/4
         k_prot[np.isnan(k_prot)] = 0
         alphas_prot[np.isnan(alphas_prot)] = 0
     if photoprotection:
@@ -147,16 +170,20 @@ def gen_com(present_species, fac, n_com_org = 100, I_ins = None,
         
     # remove species that would not survive
     phi,l = phi[..., spec_id], l[spec_id]
+    species_size = species_size[...,spec_id]
     k_photo = k_photo[..., spec_id]
     alphas_photo = alphas_photo[..., spec_id]
     k_abs = k_abs[..., spec_id]
     alphas_prot = alphas_prot[..., spec_id]
+    tot_abs = tot_abs[...,spec_id]
     if photoprotection:
-        alphas = np.append(alphas_photo, alphas_prot, axis = 0)
+        alphas = np.empty((len(photo), ) + alphas_photo.shape[1:])
+        alphas[photo] = alphas_photo
+        alphas[~photo] = alphas_prot
     else:
         alphas = alphas_photo
     
-    return phi,l, k_photo, k_abs, alphas, True
+    return phi,l, k_photo, k_abs, alphas, species_size, tot_abs
 
 def mono_culture_survive(par, k_photo, I_ins, k_BG = 0 ,zm = 100):
     """check whether each species could survive in monoculture
@@ -200,8 +227,22 @@ if __name__ == "__main__":
     fig.savefig("golf.pdf")
     # plot the absorption spectrum of random species
     plt.figure()
-    phi,l, k_photo, k_abs, alphas, a  = gen_com(np.random.randint(11,size = 5),4,100,
+    phi,l, k_photo, k_abs, alphas, a,b  = gen_com(np.random.randint(11,size = 5),4,1000,
                         50*I_inf.sun_spectrum["blue sky"], I_inf.k_BG["ocean"],
-                        photoprotection=False)
+                        photoprotection=True)
     plt.plot(k_photo[...,0])
     plt.plot(k_abs[...,0], '--')
+    
+    fig = plt.figure()
+    plt.scatter(phi, simps(k_photo, axis = 0, dx = dlam), s = 5, alpha = 0.5)
+    plt.loglog()
+    plt.ylim([1e-8,1e-6])
+    plt.xlabel("phi")
+    plt.ylabel("total absorption")
+    fig.savefig("phi_abs_tradeof.png")
+    
+    plt.figure()
+    plt.hist(np.sum(species_pigments>0, axis = 0), bins = np.arange(10)+0.5)
+    
+    plt.figure()
+    plt.hist(np.std(a, axis = 0)/np.mean(a, axis = 0), bins = 100)

@@ -91,11 +91,12 @@ def multi_growth(N,t,I_in, k_photo, k_abs, phi,l,zm = 1,k_BG = 0, linear = False
         phi = phi.reshape(phi.shape + (1,))
     if linear:
         N = N.reshape(-1,len(l))
-    # growth rate of the species
+
     # sum(N_j*k_j(lambda))
     tot_abs = zm*(np.nansum(N*k_abs, axis = 1, keepdims = True) + k_BG)
-    if np.any(tot_abs==0):
-        growth = phi*simps(k_photo*I_in(t).reshape(-1,1,1), dx = dlam, axis = 0)
+    if np.any(tot_abs<=0):
+        growth = phi*simps(k_photo*I_in(t).reshape(-1,1,1),
+                           dx = dlam, axis = 0)
     else:
         # growth part
         growth = phi*simps(k_photo/tot_abs*(1-np.exp(-tot_abs))\
@@ -143,7 +144,7 @@ def multispecies_equi(fitness, k_photo, k_abs,
 
     # k_spec(lam), shape = (len(lam), richness, ncom)
     abs_photo = k_photo.copy()
-    abs_abs = k_abs.copy()
+    k_abs = k_abs.copy()
     I_in.shape = -1,1,1
     unfixed = np.full(fitness.shape[-1], True, dtype = bool)
     n = 20
@@ -152,7 +153,7 @@ def multispecies_equi(fitness, k_photo, k_abs,
     #print(equis.shape, equis_fix.shape, fitness.shape, np.sum(unfixed), abs_points.shape)
     while np.any(unfixed) and i<runs:          
         # sum_i(N_i*sum_j(a_ij*k_j(lam)), shape = (len(lam),itera)
-        tot_abs = zm*(np.sum(equis*abs_abs, axis = 1,
+        tot_abs = zm*(np.sum(equis*k_abs, axis = 1,
                              keepdims = True) + k_BG)
         if (tot_abs == 0).any():
             raise
@@ -180,7 +181,7 @@ def multispecies_equi(fitness, k_photo, k_abs,
             # prepare for next runs
             unfixed[unfixed] = cond
             equis = equis[:,cond]
-            abs_abs = abs_abs[...,cond]
+            k_abs = k_abs[...,cond]
             abs_photo = abs_photo[...,cond]
             fitness = fitness[:,cond]
         i+=1
