@@ -40,13 +40,13 @@ species_pigments[np.isnan(species_pigments)] = 0
 photo = pig_spe_id.Photosynthetic[pigment_order].values == 1
 
 # from Finkel 2010
-size_range = 10**np.array([0,5]) # range of phytoplankton volumes
+size_range = 10**np.array([0,4]) # range of phytoplankton volumes
 # maximum and minimal value of photosynthetic efficiency
 phi_mean = 2e6 # taken from stomp/landaon
 tot_abs_mean = 2.0e-7 # average integrated absorbtion
 mean_size = np.prod(np.sqrt(size_range)) # reference size
 
-noise = [0.9,1/0.9]
+noise = [1,1]
 
                  
 n_diff_spe = len(species_names) # number of different species
