@@ -224,25 +224,12 @@ if __name__ == "__main__":
                  linewidth = 3)
     plt.xlabel("nm")
     plt.legend(labels = pigment_order)
-    fig.savefig("golf.pdf")
+    fig.savefig("Pigment_absorption_spectra.pdf")
     # plot the absorption spectrum of random species
     plt.figure()
     phi,l, k_photo, k_abs, alphas, a,b  = gen_com(np.random.randint(11,size = 5),4,1000,
                         50*I_inf.sun_spectrum["blue sky"], I_inf.k_BG["ocean"],
                         photoprotection=True)
-    plt.plot(k_photo[...,0])
-    plt.plot(k_abs[...,0], '--')
-    
-    fig = plt.figure()
-    plt.scatter(phi, simps(k_photo, axis = 0, dx = dlam), s = 5, alpha = 0.5)
-    plt.loglog()
-    plt.ylim([1e-8,1e-6])
-    plt.xlabel("phi")
-    plt.ylabel("total absorption")
-    fig.savefig("phi_abs_tradeof.png")
-    
-    plt.figure()
-    plt.hist(np.sum(species_pigments>0, axis = 0), bins = np.arange(10)+0.5)
-    
-    plt.figure()
-    plt.hist(np.std(a, axis = 0)/np.mean(a, axis = 0), bins = 100)
+    plt.plot(lambs, k_photo[...,0])
+    plt.plot(lambs, k_abs[...,0], '--')
+    plt.title("example species absorption spectra")

@@ -12,15 +12,13 @@ from scipy.integrate import simps
 import warnings
 
 try:
-    from generate_species import gen_com, n_diff_spe, lambs, dlam
+    from generate_species import gen_com, n_diff_spe, dlam
     import I_in_functions as I_in_m
-    from differential_functions import own_ode
     from nfd_definitions import numerical_NFD
 except ImportError: # to allow importing in a submodule
     from phytoplankton_communities.generate_species import gen_com, n_diff_spe
-    from phytoplankton_communities.generate_species import lambs, dlam
+    from phytoplankton_communities.generate_species import dlam
     import  phytoplankton_communities.I_in_functions as I_in_m
-    from  phytoplankton_communities.differential_functions import own_ode
     from phytoplankton_communities.nfd_definitions import numerical_NFD
     
 def find_survivors(equi, species_id):
